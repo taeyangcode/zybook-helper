@@ -1,0 +1,15 @@
+{
+  "name": "zybook-helper",
+  "version": "0.1.0",
+  "description": "",
+  "main": "./dist/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "장태양",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chrome": "^0.0.180",
+    "typescript": "^4.6.3"
+  }
+}

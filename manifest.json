@@ -1,0 +1,19 @@
+{
+  "name": "Zybook Helper",
+  "description": "Made with 💕",
+  "version": "0.1",
+  "manifest_version": 3,
+
+  "background": {
+    "service_worker": "dist/source/service.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://learn.zybooks.com/zybook/*"],
+      "js": ["dist/source/main.js"]
+    }
+  ],
+
+  "permissions": ["storage", "activeTab", "scripting"]
+}

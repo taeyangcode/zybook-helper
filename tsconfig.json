@@ -1,0 +1,15 @@
+{
+  "include": ["./source/"],
+
+  "compilerOptions": {
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    "target": "ES6",
+
+    "strict": true,
+
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "sourceMap": false
+  }
+}
