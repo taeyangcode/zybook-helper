@@ -38,14 +38,14 @@ class TextArea {
         });
     }
     static solve() {
-        const showAnswerButtons = TextArea.getShowAnswerButtons();
-        const textAreas = TextArea.getDefaultTextAreas();
-        const checkButtons = TextArea.getCheckButtons();
+        const showAnswerButtons = this.getShowAnswerButtons();
+        const textAreas = this.getDefaultTextAreas();
+        const checkButtons = this.getCheckButtons();
         // Delayed to wait for page to load Show Answer buttons
         setTimeout(() => ZybookHelper.clickButtons(showAnswerButtons), 1000);
         setTimeout(() => ZybookHelper.clickButtons(showAnswerButtons), 1500);
         setTimeout(() => {
-            const forfeitAnswers = TextArea.getForfeitAnswers();
+            const forfeitAnswers = this.getForfeitAnswers();
             [...textAreas].forEach((textArea, index) => {
                 textArea.value = forfeitAnswers[index].textContent;
                 // Without focusing textarea, submit button's
@@ -63,7 +63,7 @@ class MultipleChoice {
     }
     static solve() {
         setTimeout(() => {
-            const radioButtons = MultipleChoice.getRadioButtons();
+            const radioButtons = this.getRadioButtons();
             // Iterating and clicking over each radio button before their respective
             // POST operation completes will end up in occassional unregistered clicks.
             radioButtons.forEach((radioButton, index) => {
@@ -90,14 +90,14 @@ class Participate {
     }
     static completeParticipateActivity(activityAmount) {
         return __awaiter(this, void 0, void 0, function* () {
-            let finishButtons = Participate.getParticipateFinishButtons();
+            let finishButtons = this.getParticipateFinishButtons();
             // Run loop while the amount of finish buttons on the screen is less than the amount
             // of participation activities for this page.
             while (finishButtons.length < activityAmount) {
-                const playButtons = Participate.getParticipatePlayButtons();
+                const playButtons = this.getParticipatePlayButtons();
                 ZybookHelper.clickButtons(playButtons);
                 // Update finishButtons with the (new) amount of finish buttons on the page
-                finishButtons = Participate.getParticipateFinishButtons();
+                finishButtons = this.getParticipateFinishButtons();
                 // To prevent locking, loop pauses for 1 second before continuing onto next iteration
                 yield this.pause(1000);
             }
@@ -106,11 +106,11 @@ class Participate {
     static solve() {
         setTimeout(() => {
             // If there are no participate questions, exit function
-            if (!Participate.participateQuestionsExist()) {
+            if (!this.participateQuestionsExist()) {
                 return;
             }
-            const startButtons = Participate.getParticipateStartButtons();
-            const speedButtons = Participate.get2XSpeedButtons();
+            const startButtons = this.getParticipateStartButtons();
+            const speedButtons = this.get2XSpeedButtons();
             const activityAmount = speedButtons.length;
             // Click 2x speed buttons & start buttons
             ZybookHelper.clickButtons(speedButtons);
@@ -124,6 +124,35 @@ class Participate {
     }
 }
 Participate.pause = (time) => new Promise((resolve) => setTimeout(resolve, time));
-TextArea.solve();
-MultipleChoice.solve();
-Participate.solve();
+class ErrorFind {
+    static getButtonOptions() {
+        return document.getElementsByClassName("zb-button grey unclicked");
+    }
+    static solve() {
+        setTimeout(() => {
+            const buttons = this.getButtonOptions();
+            [...buttons].forEach((button, index) => {
+                setTimeout(() => button.click(), index * 300);
+            });
+        }, 3000);
+    }
+}
+class Output {
+    static getOutputActivies() {
+        return document.getElementsByClassName("interactive-activity-container custom-content-resource challenge");
+    }
+    static getStartButton(activity) {
+        return activity.getElementsByClassName("zyante-progression-start-button button");
+    }
+    static solve() {
+        setTimeout(() => {
+            const activities = this.getOutputActivies();
+            [...activities].forEach((activity) => console.log(this.getStartButton(activity)));
+        }, 3000);
+    }
+}
+// TextArea.solve();
+// MultipleChoice.solve();
+// Participate.solve();
+// ErrorFind.solve();
+Output.solve();

@@ -7,6 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "장태양",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/taeyangcode/zybook-helper"
+  },
   "license": "MIT",
   "devDependencies": {
     "@types/chrome": "^0.0.180",
