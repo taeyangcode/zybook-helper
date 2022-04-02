@@ -1,16 +1,16 @@
 debugger;
 
-const isUndefined = (input: any): boolean => typeof input === "undefined";
-
-class Zybook {
-  public static getShowAnswerButtons(): HTMLCollectionOf<HTMLButtonElement> {
-    return document.getElementsByClassName("zb-button secondary show-answer-button") as HTMLCollectionOf<HTMLButtonElement>;
-  }
-
-  public static clickButtons(buttons: HTMLCollectionOf<HTMLButtonElement>): void {
-    [...buttons].forEach((button: HTMLButtonElement): void => {
+class ZybookHelper {
+  public static clickButtons(buttons: HTMLCollectionOf<HTMLElement> | NodeListOf<HTMLElement>): void {
+    [...buttons].forEach((button: HTMLElement) => {
       button.click();
     });
+  }
+}
+
+class TextArea {
+  public static getShowAnswerButtons(): HTMLCollectionOf<HTMLButtonElement> {
+    return document.getElementsByClassName("zb-button secondary show-answer-button") as HTMLCollectionOf<HTMLButtonElement>;
   }
 
   public static getForfeitAnswers(): HTMLCollectionOf<HTMLSpanElement> {
@@ -23,6 +23,10 @@ class Zybook {
     ) as HTMLCollectionOf<HTMLTextAreaElement>;
   }
 
+  public static getCheckButtons(): HTMLCollectionOf<HTMLButtonElement> {
+    return document.getElementsByClassName("zb-button primary raised check-button") as HTMLCollectionOf<HTMLButtonElement>;
+  }
+
   public static inputTextAreas(textAreas: HTMLCollectionOf<HTMLTextAreaElement>, input: Array<string>): void {
     if (textAreas.length !== input.length) {
       throw new RangeError("Text Area collection and Input collection mismatch in length!");
@@ -32,14 +36,48 @@ class Zybook {
     });
   }
 
-  public static getCheckButtons(): HTMLCollectionOf<HTMLButtonElement> {
-    return document.getElementsByClassName("zb-button primary raised check-button") as HTMLCollectionOf<HTMLButtonElement>;
-  }
+  public static solve(): void {
+    const showAnswerButtons: HTMLCollectionOf<HTMLButtonElement> = TextArea.getShowAnswerButtons();
+    const textAreas: HTMLCollectionOf<HTMLTextAreaElement> = TextArea.getDefaultTextAreas();
+    const checkButtons: HTMLCollectionOf<HTMLButtonElement> = TextArea.getCheckButtons();
 
+    // Delayed to wait for page to load Show Answer buttons
+    setTimeout(() => ZybookHelper.clickButtons(showAnswerButtons), 1000);
+    setTimeout(() => ZybookHelper.clickButtons(showAnswerButtons), 1500);
+
+    setTimeout(() => {
+      const forfeitAnswers: HTMLCollectionOf<HTMLSpanElement> = TextArea.getForfeitAnswers();
+      [...textAreas].forEach((textArea: HTMLTextAreaElement, index: number) => {
+        textArea.value = forfeitAnswers[index].textContent!;
+        // Without focusing textarea, submit button's
+        // POST operation recognizes its value as empty.
+        textArea.focus();
+        textArea.blur();
+        checkButtons[index].click();
+      });
+    }, 2000);
+  }
+}
+
+class MultipleChoice {
   public static getRadioButtons(): NodeListOf<HTMLInputElement> {
     return document.querySelectorAll("input[type=radio]");
   }
 
+  public static solve(): void {
+    setTimeout(() => {
+      const radioButtons: NodeListOf<HTMLInputElement> = MultipleChoice.getRadioButtons();
+
+      // Iterating and clicking over each radio button before their respective
+      // POST operation completes will end up in occassional unregistered clicks.
+      radioButtons.forEach((radioButton: HTMLInputElement, index: number) => {
+        setTimeout(() => radioButton.click(), index * 300);
+      });
+    }, 3000);
+  }
+}
+
+class Participate {
   public static getParticipateStartButtons(): HTMLCollectionOf<HTMLButtonElement> {
     return document.getElementsByClassName("zb-button primary raised start-button start-graphic") as HTMLCollectionOf<HTMLButtonElement>;
   }
@@ -60,100 +98,49 @@ class Zybook {
     return document.getElementsByClassName("play-button rotate-180") as HTMLCollectionOf<HTMLDivElement>;
   }
 
-  // public static getOutputSolverStartButton(): HTMLCollectionOf<HTMLButtonElement> {
-  //   return document.getElementsByClassName("zyante-progression-start-button button") as HTMLCollectionOf<HTMLButtonElement>;
-  // }
-}
-
-class Solver {
-  public static solveMultipleChoice(): void {
-    setTimeout(() => {
-      const radioButtons: NodeListOf<HTMLInputElement> = Zybook.getRadioButtons();
-
-      radioButtons.forEach((radioButton: HTMLInputElement, index: number) => {
-        setTimeout(() => radioButton.click(), index * 300);
-      });
-    }, 3000);
-  }
-
-  public static solveTextAreas(): void {
-    const showAnswerButtons: HTMLCollectionOf<HTMLButtonElement> = Zybook.getShowAnswerButtons();
-    const forfeitAnswers: HTMLCollectionOf<HTMLSpanElement> = Zybook.getForfeitAnswers();
-    const textAreas: HTMLCollectionOf<HTMLTextAreaElement> = Zybook.getDefaultTextAreas();
-    const checkButtons: HTMLCollectionOf<HTMLButtonElement> = Zybook.getCheckButtons();
-
-    setTimeout(() => Zybook.clickButtons(showAnswerButtons), 1500);
-    setTimeout(() => Zybook.clickButtons(showAnswerButtons), 2000);
-
-    setTimeout(() => {
-      [...textAreas].forEach((textArea: HTMLTextAreaElement, index: number) => {
-        textArea.value = [...forfeitAnswers][index].textContent!;
-        textArea.focus();
-        textArea.blur();
-        [...checkButtons][index].click();
-      });
-    }, 2500);
-  }
-
-  private static enable2XSpeed(speedButtons: NodeListOf<HTMLInputElement>): void {
-    speedButtons.forEach((button: HTMLInputElement) => {
-      button.click();
-    });
-  }
-
   private static pause = (time: number) => new Promise((resolve: TimerHandler) => setTimeout(resolve, time));
 
   private static async completeParticipateActivity(activityAmount: number): Promise<void> {
-    let finishButtons: HTMLCollectionOf<HTMLDivElement> = Zybook.getParticipateFinishButtons();
+    let finishButtons: HTMLCollectionOf<HTMLDivElement> = Participate.getParticipateFinishButtons();
 
     // Run loop while the amount of finish buttons on the screen is less than the amount
     // of participation activities for this page.
     while (finishButtons.length < activityAmount) {
-      const playButtons: HTMLCollectionOf<HTMLDivElement> = Zybook.getParticipatePlayButtons();
-      [...playButtons].forEach((playButton: HTMLDivElement) => {
-        playButton.click();
-      });
+      const playButtons: HTMLCollectionOf<HTMLDivElement> = Participate.getParticipatePlayButtons();
+      ZybookHelper.clickButtons(playButtons);
 
       // Update finishButtons with the (new) amount of finish buttons on the page
-      finishButtons = Zybook.getParticipateFinishButtons();
+      finishButtons = Participate.getParticipateFinishButtons();
 
       // To prevent locking, loop pauses for 1 second before continuing onto next iteration
       await this.pause(1000);
     }
   }
 
-  public static solveParticipateQuestions(): void {
+  public static solve(): void {
     setTimeout(() => {
       // If there are no participate questions, exit function
-      if (!Zybook.participateQuestionsExist()) {
+      if (!Participate.participateQuestionsExist()) {
         return;
       }
 
-      const startButtons: HTMLCollectionOf<HTMLButtonElement> = Zybook.getParticipateStartButtons();
-      const speedButtons: NodeListOf<HTMLInputElement> = Zybook.get2XSpeedButtons();
+      const startButtons: HTMLCollectionOf<HTMLButtonElement> = Participate.getParticipateStartButtons();
+      const speedButtons: NodeListOf<HTMLInputElement> = Participate.get2XSpeedButtons();
       const activityAmount: number = speedButtons.length;
-      this.enable2XSpeed(speedButtons);
 
-      // Click start button for each participation activity
-      [...startButtons].forEach((startButton: HTMLButtonElement, index: number) => {
-        // To avoid issue where click event is sometimes
-        // skipped when looping over HTML elements too fast,
-        // each click is separated by 300 ms.
-        setTimeout(() => {
-          startButton.click();
-        }, 300 * index);
-      });
+      // Click 2x speed buttons & start buttons
+      ZybookHelper.clickButtons(speedButtons);
+      ZybookHelper.clickButtons(startButtons);
 
-      // Initiate the completion of each activity after
-      // each activity has been started.
-      // (hence the + 100ms)
+      // Initiate completion method once required
+      // starting buttons have been clicked.
       setTimeout(() => {
         this.completeParticipateActivity(activityAmount);
-      }, 300 * startButtons.length + 100);
+      }, 500);
     }, 3000);
   }
 }
 
-Solver.solveMultipleChoice();
-Solver.solveTextAreas();
-Solver.solveParticipateQuestions();
+TextArea.solve();
+MultipleChoice.solve();
+Participate.solve();
