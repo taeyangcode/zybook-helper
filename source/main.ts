@@ -6,6 +6,8 @@ class ZybookHelper {
       button.click();
     });
   }
+
+  public static pause = (time: number): Promise<unknown> => new Promise((resolve: TimerHandler): number => setTimeout(resolve, time));
 }
 
 class TextArea {
@@ -98,8 +100,6 @@ class Participate {
     return document.getElementsByClassName("play-button rotate-180") as HTMLCollectionOf<HTMLDivElement>;
   }
 
-  private static pause = (time: number): Promise<unknown> => new Promise((resolve: TimerHandler): number => setTimeout(resolve, time));
-
   private static async completeParticipateActivity(activityAmount: number): Promise<void> {
     let finishButtons: HTMLCollectionOf<HTMLDivElement> = this.getParticipateFinishButtons();
 
@@ -113,7 +113,7 @@ class Participate {
       finishButtons = this.getParticipateFinishButtons();
 
       // To prevent locking, loop pauses for 1 second before continuing onto next iteration
-      await this.pause(1000);
+      await ZybookHelper.pause(1000);
     }
   }
 
@@ -162,6 +162,7 @@ interface OutputActivityElements {
   checkButton: HTMLButtonElement;
   nextButton: HTMLButtonElement;
   textArea: HTMLTextAreaElement;
+  spinner: HTMLDivElement;
 }
 
 class Output {
@@ -187,6 +188,10 @@ class Output {
     return activity.querySelector('textarea[aria-label="The program\'s output"]')!;
   }
 
+  private static getSpinner(activity: HTMLDivElement): HTMLDivElement {
+    return activity.getElementsByClassName("zyante-progression-spinner")[0] as HTMLDivElement;
+  }
+
   private static getExpectedOutput(activity: HTMLDivElement): HTMLDivElement {
     return activity.getElementsByClassName("output expected-output")[0] as HTMLDivElement;
   }
@@ -197,20 +202,87 @@ class Output {
       checkButton: this.getCheckButton(activity),
       nextButton: this.getNextButton(activity),
       textArea: this.getTextArea(activity),
+      spinner: this.getSpinner(activity),
     };
+  }
+
+  private static async checkButtonReady(button: HTMLButtonElement): Promise<void> {
+    while (button.classList.contains("disabled")) {
+      await ZybookHelper.pause(1000);
+    }
+    return;
+  }
+
+  private static async spinnerActive(spinner: HTMLDivElement): Promise<void> {
+    while (spinner.hasChildNodes()) {
+      await ZybookHelper.pause(1000);
+    }
+    return;
+  }
+
+  private static async enableElement(element: HTMLElement): Promise<void> {
+    element.removeAttribute("disabled");
+    element.classList.remove("disabled");
+  }
+
+  private static async isCompleted(activity: HTMLDivElement): Promise<boolean> {
+    while (activity.getElementsByClassName("zb-progress-circular med orange ember-view").length > 0) {
+      await ZybookHelper.pause(1000);
+    }
+    return activity.getElementsByClassName("zb-chevron title-bar-chevron grey outline large").length === 0;
+  }
+
+  private static async exposeExpectedResult(checkButton: HTMLButtonElement): Promise<void> {
+    await this.checkButtonReady(checkButton);
+    checkButton.click();
+    await ZybookHelper.pause(500);
+  }
+
+  private static async awaitExpectedResult(activity: HTMLDivElement, spinner: HTMLDivElement): Promise<string> {
+    await this.spinnerActive(spinner);
+    return this.getExpectedOutput(activity).textContent!;
+  }
+
+  private static async inputAnswer(textArea: HTMLTextAreaElement, answer: string): Promise<void> {
+    await this.enableElement(textArea);
+    await ZybookHelper.pause(500);
+    textArea.focus();
+    textArea.blur();
+    textArea.value = answer;
+  }
+
+  private static async submitAnswer(checkButton: HTMLButtonElement): Promise<void> {
+    await this.enableElement(checkButton);
+    await ZybookHelper.pause(500);
+    checkButton.click();
+  }
+
+  private static async solveActivity(activity: HTMLDivElement): Promise<void> {
+    const elements: OutputActivityElements = this.getActivityElements(activity);
+    await ZybookHelper.pause(500);
+    elements.startButton.click();
+    while (!(await this.isCompleted(activity))) {
+      await this.exposeExpectedResult(elements.checkButton);
+      const answer: string = await this.awaitExpectedResult(activity, elements.spinner);
+      await this.inputAnswer(elements.textArea, answer);
+      await this.submitAnswer(elements.checkButton);
+      await ZybookHelper.pause(1000).then(() => elements.nextButton.click());
+    }
   }
 
   public static solve(): void {
     setTimeout(() => {
       const activities: HTMLCollectionOf<HTMLDivElement> = this.getOutputActivies();
 
-      [...activities].forEach((activity: HTMLDivElement) => {});
+      [...activities].forEach((activity: HTMLDivElement) => {
+        this.solveActivity(activity);
+      });
     }, 3000);
   }
 }
 
-// TextArea.solve();
-// MultipleChoice.solve();
-// Participate.solve();
-// ErrorFind.solve();
+TextArea.solve();
+MultipleChoice.solve();
+Participate.solve();
+ErrorFind.solve();
 Output.solve();

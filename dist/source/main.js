@@ -16,6 +16,7 @@ class ZybookHelper {
         });
     }
 }
+ZybookHelper.pause = (time) => new Promise((resolve) => setTimeout(resolve, time));
 class TextArea {
     static getShowAnswerButtons() {
         return document.getElementsByClassName("zb-button secondary show-answer-button");
@@ -99,7 +100,7 @@ class Participate {
                 // Update finishButtons with the (new) amount of finish buttons on the page
                 finishButtons = this.getParticipateFinishButtons();
                 // To prevent locking, loop pauses for 1 second before continuing onto next iteration
-                yield this.pause(1000);
+                yield ZybookHelper.pause(1000);
             }
         });
     }
@@ -123,7 +124,6 @@ class Participate {
         }, 3000);
     }
 }
-Participate.pause = (time) => new Promise((resolve) => setTimeout(resolve, time));
 class ErrorFind {
     static getButtonOptions() {
         return document.getElementsByClassName("zb-button grey unclicked");
@@ -142,17 +142,116 @@ class Output {
         return document.getElementsByClassName("interactive-activity-container custom-content-resource challenge");
     }
     static getStartButton(activity) {
-        return activity.getElementsByClassName("zyante-progression-start-button button");
+        return activity.getElementsByClassName("zyante-progression-start-button button")[0];
+    }
+    static getCheckButton(activity) {
+        return activity.getElementsByClassName("zyante-progression-check-button button")[0];
+    }
+    static getNextButton(activity) {
+        return activity.getElementsByClassName("zyante-progression-next-button button")[0];
+    }
+    static getTextArea(activity) {
+        return activity.querySelector('textarea[aria-label="The program\'s output"]');
+    }
+    static getSpinner(activity) {
+        return activity.getElementsByClassName("zyante-progression-spinner")[0];
+    }
+    static getExpectedOutput(activity) {
+        return activity.getElementsByClassName("output expected-output")[0];
+    }
+    static getActivityElements(activity) {
+        return {
+            startButton: this.getStartButton(activity),
+            checkButton: this.getCheckButton(activity),
+            nextButton: this.getNextButton(activity),
+            textArea: this.getTextArea(activity),
+            spinner: this.getSpinner(activity),
+        };
+    }
+    static checkButtonReady(button) {
+        return __awaiter(this, void 0, void 0, function* () {
+            while (button.classList.contains("disabled")) {
+                yield ZybookHelper.pause(1000);
+            }
+            return;
+        });
+    }
+    static spinnerActive(spinner) {
+        return __awaiter(this, void 0, void 0, function* () {
+            while (spinner.hasChildNodes()) {
+                yield ZybookHelper.pause(1000);
+            }
+            return;
+        });
+    }
+    static enableElement(element) {
+        return __awaiter(this, void 0, void 0, function* () {
+            element.removeAttribute("disabled");
+            element.classList.remove("disabled");
+        });
+    }
+    static isCompleted(activity) {
+        return __awaiter(this, void 0, void 0, function* () {
+            while (activity.getElementsByClassName("zb-progress-circular med orange ember-view").length > 0) {
+                yield ZybookHelper.pause(1000);
+            }
+            return activity.getElementsByClassName("zb-chevron title-bar-chevron grey outline large").length === 0;
+        });
+    }
+    static exposeExpectedResult(checkButton) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.checkButtonReady(checkButton);
+            checkButton.click();
+            yield ZybookHelper.pause(500);
+        });
+    }
+    static awaitExpectedResult(activity, spinner) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.spinnerActive(spinner);
+            return this.getExpectedOutput(activity).textContent;
+        });
+    }
+    static inputAnswer(textArea, answer) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.enableElement(textArea);
+            yield ZybookHelper.pause(500);
+            textArea.focus();
+            textArea.blur();
+            textArea.value = answer;
+        });
+    }
+    static submitAnswer(checkButton) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.enableElement(checkButton);
+            yield ZybookHelper.pause(500);
+            checkButton.click();
+        });
+    }
+    static solveActivity(activity) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const elements = this.getActivityElements(activity);
+            yield ZybookHelper.pause(500);
+            elements.startButton.click();
+            while (!(yield this.isCompleted(activity))) {
+                yield this.exposeExpectedResult(elements.checkButton);
+                const answer = yield this.awaitExpectedResult(activity, elements.spinner);
+                yield this.inputAnswer(elements.textArea, answer);
+                yield this.submitAnswer(elements.checkButton);
+                yield ZybookHelper.pause(1000).then(() => elements.nextButton.click());
+            }
+        });
     }
     static solve() {
         setTimeout(() => {
             const activities = this.getOutputActivies();
-            [...activities].forEach((activity) => console.log(this.getStartButton(activity)));
+            [...activities].forEach((activity) => {
+                this.solveActivity(activity);
+            });
         }, 3000);
     }
 }
-// TextArea.solve();
-// MultipleChoice.solve();
-// Participate.solve();
-// ErrorFind.solve();
+TextArea.solve();
+MultipleChoice.solve();
+Participate.solve();
+ErrorFind.solve();
 Output.solve();
